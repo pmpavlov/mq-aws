@@ -11,7 +11,7 @@ manager which can be automatically moved between availability zones in the
 case of a failure.
 
 <p align="center">
-<img src="/efs/architecture.png" alt="Architecture">
+<img src="/architecture.png" alt="Architecture">
 </p>
 
 An EFS file system is scoped to a particular AWS region. You can create "mount
