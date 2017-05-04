@@ -1,0 +1,209 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'IBM MQ: Creates a HA Ibm MQ hosts in a specific VPC and Subnets'
+Parameters:
+
+  KeyName:
+    Description: "Name of an existing EC2 KeyPair to enable SSH access to the instances"
+    Type: "AWS::EC2::KeyPair::KeyName"
+    ConstraintDescription: "must be the name of an existing EC2 KeyPair."
+
+  AMI:
+    Description: "ID of an AMI with IBM MQ pre-installed"
+    Type: "AWS::EC2::Image::Id"
+    ConstraintDescription: "must be a valid AMI ID."
+
+  InstanceType:
+    Description: "MQ server EC2 instance type"
+    Type: "String"
+    Default: "t2.micro"
+    AllowedValues: 
+      - t1.micro
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+    ConstraintDescription: "must be a valid EC2 instance type."
+
+  VPC:
+    Description: "The ID of a VPC hosting a NAT instance"
+    Type: "AWS::EC2::VPC::Id"
+
+  Subnet1:
+    Type: String
+    Description: "The ID of a subnet in your VPC"
+    Type: "AWS::EC2::Subnet::Id"
+
+  Subnet2:
+    Type: String
+    Description: "The ID of a subnet in your VPC"
+    Type: "AWS::EC2::Subnet::Id"
+
+  QueueManagerName:
+    Description: "Name to use for the IBM MQ queue manager"
+    Type: "String"
+    ConstraintDescription: "must be a valid MQ queue manager name."
+
+  AvailabilityZone1:
+    Description: "Availability zone"
+    Type: "AWS::EC2::AvailabilityZone::Name"
+    ConstraintDescription: "must be a valid AWS availability zone."
+
+  AvailabilityZone2:
+    Description: "Availability zone"
+    Type: "AWS::EC2::AvailabilityZone::Name"
+    ConstraintDescription: "must be a valid AWS availability zone."
+
+Resources:
+  
+  ReportHealthRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+         Statement:
+           -
+             Effect: "Allow"
+             Principal:
+               Service:
+                 - "ec2.amazonaws.com"
+             Action:
+               - "sts:AssumeRole"
+      Path: "/"
+
+  ReportHealthRolePolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "ReportHealthPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - 
+            Effect: "Allow"
+            Action: "autoscaling:SetInstanceHealth"
+            Resource: "*"
+      Roles: !Ref "ReportHealthRole"
+
+  ReportHealthInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles: !Ref ReportHealthRole
+
+  MQSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: "Enable SSH access via port 22"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+        - FromPort: "22"
+        - ToPort: "22"
+        - CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp 
+        - FromPort: "1414"
+        - ToPort: "1414"
+        - CidrIp: 0.0.0.0/0
+
+  MountTargetSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: "Security group for mount target"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+        - FromPort: "2049"
+        - ToPort: "2049"
+        - CidrIp: 0.0.0.0/0
+
+  LaunchConfiguration:
+    Type: "AWS::AutoScaling::LaunchConfiguration"
+    Properties:
+      AssociatePublicIpAddress: true
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups: !Ref MQSecurityGroup
+      IamInstanceProfile: !Ref ReportHealthInstanceProfile
+      UserData:
+          Fn::Base64:
+            !Join [ "", [ "#cloud-config\n",
+                          "write_files: \n",
+                          " - content: |\n",
+                          "     #!/bin/bash\n",
+                          "     MQ_QMGR_NAME=", !Ref "QueueManagerName", "\n",
+                          "     MQ_FILE_SYSTEM=", !Ref "MQFileSystem", "\n",
+                          "     AWS_REGION=", !Ref "AWS::Region", "\n",
+                          "     chmod +x /tmp/configure-mq-aws\n",
+                          "     /tmp/configure-mq-aws ${MQ_QMGR_NAME} ${MQ_FILE_SYSTEM} ${AWS_REGION}\n",
+                          "   owner: root:root\n",
+                          "   path: /tmp/configure\n",
+                          "   permissions: '0700'\n",
+                          "runcmd: \n",
+                          " - [ /tmp/configure ]" ] ]
+
+  AutoScalingGroup:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    DependsOn: [ "MountTarget1", "MountTarget2" ]
+    Properties:
+      VPCZoneIdentifier: [ !Ref "Subnet1", !Ref "Subnet2" ]
+      LoadBalancerNames: !Ref LoadBalancer
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 90
+      LaunchConfigurationName: !Ref "LaunchConfiguration"
+      MinSize: "1"
+      MaxSize: "1"
+      DesiredCapacity: "1"
+      Tags:
+        Key: "Name"
+        Value": "mq-efs"
+        PropagateAtLaunch: "true"
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: "0"
+        MaxBatchSize: "1"
+
+  MQFileSystem:
+    Type: "AWS::EFS::FileSystem"
+    Properties:
+      FileSystemTags:
+        Key: "Name"
+        Value: "MQFileSystem"
+
+  MountTarget1:
+    Type: "AWS::EFS::MountTarget"
+    Properties:
+      FileSystemId: !Ref MQFileSystem
+      SubnetId: !Ref Subnet1
+      SecurityGroups: !Ref MountTargetSecurityGroup
+
+  MountTarget2:
+    Type: "AWS::EFS::MountTarget"
+    Properties:
+      FileSystemId: !Ref MQFileSystem
+      SubnetId: !Ref Subnet2
+      SecurityGroups: !Ref MountTargetSecurityGroup
+
+  LoadBalancer:
+    Type: "AWS::ElasticLoadBalancing::LoadBalancer"
+    Properties:
+      CrossZone: true
+      Listeners:
+      - LoadBalancerPort: "1414"
+        InstancePort: "1414"
+        InstanceProtocol: "TCP"
+        Protocol" : "TCP"
+      HealthCheck:
+        HealthyThreshold: "2"
+        Interval: "10"
+        Target: "TCP:1414"
+        Timeout: "5"
+        UnhealthyThreshold: "2"
+      SecurityGroups: !Ref MQSecurityGroup
+      Subnets: [ !Ref "Subnet1", !Ref "Subnet2" ]
+
+Outputs:
+  MQAddress:
+    Value: !GetAtt ["LoadBalancer", "DNSName"]
+    Description: "DNS name of MQ load balancer"
+
