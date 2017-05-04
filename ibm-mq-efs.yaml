@@ -80,15 +80,18 @@ Resources:
         Statement:
           - 
             Effect: "Allow"
-            Action: "autoscaling:SetInstanceHealth"
+            Action: 
+              - "autoscaling:SetInstanceHealth"
             Resource: "*"
-      Roles: !Ref "ReportHealthRole"
+      Roles: 
+        - 
+          Ref: "ReportHealthRole"
 
   ReportHealthInstanceProfile:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
       Path: "/"
-      Roles: !Ref ReportHealthRole
+      Roles: [ !Ref "ReportHealthRole" ]
 
   MQSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
@@ -176,31 +179,31 @@ Resources:
     Properties:
       FileSystemId: !Ref MQFileSystem
       SubnetId: !Ref Subnet1
-      SecurityGroups: !Ref MountTargetSecurityGroup
+      SecurityGroups: [ !Ref "MountTargetSecurityGroup" ]
 
   MountTarget2:
     Type: "AWS::EFS::MountTarget"
     Properties:
       FileSystemId: !Ref MQFileSystem
       SubnetId: !Ref Subnet2
-      SecurityGroups: !Ref MountTargetSecurityGroup
+      SecurityGroups: [ !Ref "MountTargetSecurityGroup" ]
 
   LoadBalancer:
     Type: "AWS::ElasticLoadBalancing::LoadBalancer"
     Properties:
       CrossZone: true
       Listeners:
-      - LoadBalancerPort: "1414"
-        InstancePort: "1414"
-        InstanceProtocol: "TCP"
-        Protocol" : "TCP"
+      - LoadBalancerPort: '1414'
+        InstancePort: '1414'
+        Protocol: TCP
+        InstanceProtocol: TCP
       HealthCheck:
-        HealthyThreshold: "2"
-        Interval: "10"
-        Target: "TCP:1414"
-        Timeout: "5"
-        UnhealthyThreshold: "2"
-      SecurityGroups: !Ref MQSecurityGroup
+        HealthyThreshold: '2'
+        Interval: '10'
+        Target: 'TCP:1414'
+        Timeout: '5'
+        UnhealthyThreshold: '2'
+      SecurityGroups: [ !Ref "MQSecurityGroup" ]
       Subnets: [ !Ref "Subnet1", !Ref "Subnet2" ]
 
 Outputs:
