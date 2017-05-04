@@ -126,7 +126,7 @@ Resources:
       ImageId: !Ref AMI
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
-      SecurityGroups: !Ref MQSecurityGroup
+      SecurityGroups: [ !Ref "MQSecurityGroup" ]
       IamInstanceProfile: !Ref ReportHealthInstanceProfile
       UserData:
           Fn::Base64:
@@ -150,7 +150,7 @@ Resources:
     DependsOn: [ "MountTarget1", "MountTarget2" ]
     Properties:
       VPCZoneIdentifier: [ !Ref "Subnet1", !Ref "Subnet2" ]
-      LoadBalancerNames: !Ref LoadBalancer
+      LoadBalancerNames: [ !Ref "LoadBalancer" ]
       HealthCheckType: ELB
       HealthCheckGracePeriod: 90
       LaunchConfigurationName: !Ref "LaunchConfiguration"
@@ -159,7 +159,7 @@ Resources:
       DesiredCapacity: "1"
       Tags:
         Key: "Name"
-        Value": "mq-efs"
+        Value: "mq-efs"
         PropagateAtLaunch: "true"
     UpdatePolicy:
       AutoScalingRollingUpdate:
