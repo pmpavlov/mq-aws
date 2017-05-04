@@ -158,7 +158,7 @@ Resources:
       MaxSize: "1"
       DesiredCapacity: "1"
       Tags:
-        Key: "Name"
+      - Key: "Name"
         Value: "mq-efs"
         PropagateAtLaunch: "true"
     UpdatePolicy:
