@@ -97,13 +97,13 @@ Resources:
       GroupDescription: "Enable SSH access via port 22"
       SecurityGroupIngress:
         - IpProtocol: tcp
-        - FromPort: "22"
-        - ToPort: "22"
-        - CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp 
-        - FromPort: "1414"
-        - ToPort: "1414"
-        - CidrIp: 0.0.0.0/0
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '1414'
+          ToPort: '1414'
+          CidrIp: 0.0.0.0/0
 
   MountTargetSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
@@ -112,9 +112,9 @@ Resources:
       GroupDescription: "Security group for mount target"
       SecurityGroupIngress:
         - IpProtocol: tcp
-        - FromPort: "2049"
-        - ToPort: "2049"
-        - CidrIp: 0.0.0.0/0
+          FromPort: '2049'
+          ToPort: '2049'
+          CidrIp: 0.0.0.0/0
 
   LaunchConfiguration:
     Type: "AWS::AutoScaling::LaunchConfiguration"
@@ -167,8 +167,9 @@ Resources:
     Type: "AWS::EFS::FileSystem"
     Properties:
       FileSystemTags:
-        Key: "Name"
-        Value: "MQFileSystem"
+        -
+          Key: "Name"
+          Value: "MQFileSystem"
 
   MountTarget1:
     Type: "AWS::EFS::MountTarget"
