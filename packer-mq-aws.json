@@ -35,6 +35,8 @@
   "builders": [{
     "type": "amazon-ebs",
     "ami_name": "ibm-mq-{{timestamp}}",
+    "vpc_id": "vpc-XXXXXXX",
+    "subnet_id": "subnet-XXXXXXX",
     "instance_type": "t2.micro",
     "region": "eu-west-1",
     "source_ami": "ami-8b8c57f8",
