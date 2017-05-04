@@ -60,6 +60,11 @@ your local laptop or workstation.
     the equivalent [RHEL 7.2 AMI in your chosen
     region](https://aws.amazon.com/marketplace/pp/B019NS7T5I). Note that, at
     the time of writing, EFS is not available in all regions.
+    Before runign the command you have to add the corect VPC and Subnet
+    where the image will be build . Thise parameters are in packer-mq-aws.json
+    file :
+    "vpc_id": "vpc-XXXXXXX",
+    "subnet_id": "subnet-XXXXXXX",
 2.  Create a stack using the CloudFormation template
     [`ibm-mq-efs.yaml`](ibm-mq-efs.yaml). 
     The teample hafe parameters like name of the VPC , Subnets etc. that need to 
